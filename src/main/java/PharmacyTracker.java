@@ -6,17 +6,20 @@
 
 import java.util.ArrayList;
 import java.util.List;
+import java.time.LocalDate;
 
 import customer.Customer;
 import customer.CustomerType;
+import medication.OTCMedication;
+import medication.PrescriptionMedication;
 
 public class PharmacyTracker {
 
     public static void main(String[] args) {
         Pharmacy p = new Pharmacy("Akosua's Pharmacy");
 
-        Medication paracetamol = new Medication("Paracetamol 500mg", 12.50, 100, "OTC");
-        Medication amoxicillin = new Medication("Amoxicillin 250mg", 30.00, 40, "PRESCRIPTION");
+        OTCMedication paracetamol = new OTCMedication("Paracetamol 500mg", 12.50, 100, 4, LocalDate.parse("2027-11-12"));
+        PrescriptionMedication amoxicillin = new PrescriptionMedication("Amoxicillin 250mg", 30.00, 40, 5, LocalDate.parse("2028-12-12"));
         p.addMedication(paracetamol);
         p.addMedication(amoxicillin);
 
@@ -27,7 +30,7 @@ public class PharmacyTracker {
         p.addCustomer(ama);
 
         // a normal morning
-        p.dispense(kofi, paracetamol, 2, null);
+        p.dispense(kofi, paracetamol, 2);
         p.dispense(ama, amoxicillin, 1, "Dr. Boateng"); // prescription-only
         p.restock(paracetamol, 50);
 
@@ -79,56 +82,124 @@ class Transaction {
 
 class Pharmacy {
     public String name;
-    public List<Medication> meds = new ArrayList<>();
+    // public List<Medication> meds = new ArrayList<>();
+    public List<OTCMedication> otcMeds = new ArrayList<>();
+    public List<PrescriptionMedication> prescriptionMeds = new ArrayList<>();
     public List<Customer> customers = new ArrayList<>();
     private List<Transaction> transactions = new ArrayList<>();
+    private static final double discount = 0.95;
 
     public Pharmacy(String name) {
         this.name = name;
     }
 
-    public void addMedication(Medication m) {
-        meds.add(m);
+    // public void addMedication(Medication m) {
+    //     meds.add(m);
+    // }
+
+    public void addMedication(OTCMedication m) {
+        otcMeds.add(m);
     }
+    
+    public void addMedication(PrescriptionMedication m) {
+        prescriptionMeds.add(m);
+    }
+    
 
     public void addCustomer(Customer c) {
         customers.add(c);
     }
 
     // Dispense medicine to a customer. The rules depend on the kind of medicine.
-    public void dispense(Customer c, Medication m, int qty, String prescriber) {
+    // public void dispense(Customer c, Medication m, int qty, String prescriber) {
+    //     double total = 0;
+    //     if (m.category.equals("OTC")) {
+    //         total = m.price * qty;
+    //         if (c.getKind() == CustomerType.REGISTERED) {
+    //             total = total * discount; // registered patients get 5% off
+    //         }
+    //         m.stock = m.stock - qty;
+    //         System.out.println("Dispensed " + qty + " x " + m.name + " to " + c.getName()
+    //                 + " for GHS " + total);
+    //     } else if (m.category.equals("PRESCRIPTION")) {
+    //         if (prescriber == null) {
+    //             System.out.println("Cannot dispense " + m.name + " without a prescriber");
+    //             return;
+    //         }
+    //         total = m.price * qty;
+    //         if (c.getKind() == CustomerType.REGISTERED) {
+    //             total = total * discount; // registered patients get 5% off
+    //         }
+    //         m.stock = m.stock - qty;
+    //         System.out.println("Dispensed " + qty + " x " + m.name + " to " + c.getName()
+    //                 + " (prescribed by " + prescriber + ") for GHS " + total);
+    //     }
+    //     c.recordHistory("Got " + qty + " x " + m.name); //TODO: catch an error here and reverse the transaction
+    //     transactions.add(new Transaction(c.getName(), m.name, qty, total, "DISPENSE"));
+    // }
+
+    private double computePrice(double medicationPrice, int qty, double discount) {
         double total = 0;
-        if (m.category.equals("OTC")) {
-            total = m.price * qty;
-            if (c.getKind() == CustomerType.REGISTERED) {
-                total = total * 0.95; // registered patients get 5% off
-            }
-            m.stock = m.stock - qty;
-            System.out.println("Dispensed " + qty + " x " + m.name + " to " + c.getName()
-                    + " for GHS " + total);
-        } else if (m.category.equals("PRESCRIPTION")) {
-            if (prescriber == null) {
-                System.out.println("Cannot dispense " + m.name + " without a prescriber");
-                return;
-            }
-            total = m.price * qty;
-            if (c.getKind() == CustomerType.REGISTERED) {
-                total = total * 0.95; // registered patients get 5% off
-            }
-            m.stock = m.stock - qty;
-            System.out.println("Dispensed " + qty + " x " + m.name + " to " + c.getName()
-                    + " (prescribed by " + prescriber + ") for GHS " + total);
+        total = medicationPrice * qty;
+        boolean noDiscount = !(discount <= 0) || (discount >= 1);
+        if (noDiscount) {
+            total = total * discount; // registered patients get 5% off
         }
-        c.recordHistory("Got " + qty + " x " + m.name); //TODO: catch an error here and reverse the transaction
-        transactions.add(new Transaction(c.getName(), m.name, qty, total, "DISPENSE"));
+        return total;
+    }
+
+    public void dispense(Customer c, OTCMedication m, int qty) {
+        try {
+            boolean cannotSatisfyDispense = qty > m.getStock();
+            if (cannotSatisfyDispense) throw new IllegalStateException("Insufficient stock for " + m.getName() + ": requested " + qty + ", available " + m.getStock());
+        
+            double total = computePrice(m.getPrice(), qty, 0);
+            m.reduceStockBy(qty);
+            System.out.println("Dispensed " + qty + " x " + m.getName() + " to " + c.getName()
+                    + " for GHS " + total);
+            c.recordHistory("Got " + qty + " x " + m.getName()); //TODO: catch an error here and reverse the transaction
+            transactions.add(new Transaction(c.getName(), m.getName(), qty, total, "DISPENSE"));
+
+        } catch (IllegalArgumentException e) {
+            System.out.println(e.getCause());
+        }        
+    }
+
+    public void dispense(Customer c, PrescriptionMedication m, int qty, String prescriber) {
+        try {
+             boolean cannotSatisfyDispense = qty > m.getStock();
+            if (cannotSatisfyDispense) throw new IllegalStateException("Insufficient stock for " + m.getName() + ": requested " + qty + ", available " + m.getStock());
+
+            double total = computePrice(m.getPrice(), qty, discount);
+            m.reduceStockBy(qty);
+            System.out.println("Dispensed " + qty + " x " + m.getName() + " to " + c.getName()
+                    + " (prescribed by " + prescriber + ") for GHS " + total);
+            c.recordHistory("Got " + qty + " x " + m.getName()); //TODO: catch an error here and reverse the transaction
+            transactions.add(new Transaction(c.getName(), m.getName(), qty, total, "DISPENSE"));
+        } catch(Exception e) {
+
+        }
+
     }
 
     
 
-    public void restock(Medication m, int qty) {
-        m.stock = m.stock + qty;
-        transactions.add(new Transaction("(supplier)", m.name, qty, 0, "RESTOCK"));
-        System.out.println("Restocked " + qty + " x " + m.name);
+    // public void restock(Medication m, int qty) {
+    //     m.stock = m.stock + qty;
+    //     transactions.add(new Transaction("(supplier)", m.name, qty, 0, "RESTOCK"));
+    //     System.out.println("Restocked " + qty + " x " + m.name);
+    // }
+
+     public void restock(OTCMedication m, int qty) {
+        m.increaseStockBy(qty);
+        transactions.add(new Transaction("(supplier)", m.getName(), qty, 0, "RESTOCK"));
+        System.out.println("Restocked " + qty + " x " + m.getName());
+    }
+
+     public void restock(PrescriptionMedication m, int qty) {
+        m.increaseStockBy(qty);
+        transactions.add(new Transaction("(supplier)", m.getName(), qty, 0, "RESTOCK"));
+        System.out.println("Restocked " + qty + " x " + m.getName());
     }
 
     public List<Transaction> getTransactions() {
@@ -139,9 +210,13 @@ class Pharmacy {
         System.out.println();
         System.out.println("=== " + name + " - end of day ===");
         System.out.println("Stock levels:");
-        for (Medication m : meds) {
-            System.out.println("  " + m.name + " (" + m.category + "): " + m.stock + " in stock");
+        for (OTCMedication m : otcMeds) {
+            System.out.println("  " + m.getName() + " (OTC): " + m.getStock() + " in stock");
         }
+        for (PrescriptionMedication m : prescriptionMeds) {
+            System.out.println("  " + m.getName() + " (PRESCRIPTION): " + m.getStock() + " in stock");
+        }
+        
         System.out.println("Transactions today: " + transactions.size());
     }
 }

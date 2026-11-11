@@ -1,19 +1,19 @@
 package medication;
 import java.time.LocalDate;
 
+import customer.Customer;
+
 public abstract class Medication {
     private String name;
     private double price;
     private int stock;
-    private String category; // "OTC" or "PRESCRIPTION"
     private int id;
     private LocalDate expiryDate;
     private int stockingThreshold;
     static int counter = 1;
 
-    
 
-    public Medication(String name, double price, int stock, String category, int stockingThreshold, LocalDate expiryDate) {
+    public Medication(String name, double price, int stock, int stockingThreshold, LocalDate expiryDate) {
         if (name == null || name.isBlank()) {
             throw new IllegalArgumentException("Medication name must not be blank");
         }
@@ -27,13 +27,41 @@ public abstract class Medication {
             throw new IllegalArgumentException("Expiry date is required");
         }
 
+        if (expiryDate.isBefore(LocalDate.now())) {
+            throw new IllegalArgumentException("Cannot register expired goodds");
+        }
+
         this.id = counter;
         counter++;
         this.name = name;
         this.price = price;
         this.stock = stock;
-        this.category = category;
         this.stockingThreshold = stockingThreshold;
         this.expiryDate = expiryDate;
     }
+
+    public double getPrice() {
+        return this.price;
+    };
+
+    public int getStock() {
+        return this.stock;
+    }
+
+    public void reduceStockBy(int n) {
+        if (n < 0) throw new IllegalArgumentException("Stock cannot be negative, got " + n);
+        this.stock -= n;
+    }
+
+    public void increaseStockBy(int n) {
+         if (n < 0) throw new IllegalArgumentException("Cannot increase stock by " + n);
+         this.stock += n;
+    }
+
+    public String getName() {
+        return this.name;
+    }
+
+    public abstract void dispense(Customer c, int qty, String prescriber);
+    
 }
