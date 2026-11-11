@@ -9,7 +9,6 @@ import java.util.List;
 import java.time.LocalDate;
 
 import customer.Customer;
-import customer.CustomerType;
 import medication.OTCMedication;
 import medication.PrescriptionMedication;
 
@@ -181,14 +180,6 @@ class Pharmacy {
         }
 
     }
-
-    
-
-    // public void restock(Medication m, int qty) {
-    //     m.stock = m.stock + qty;
-    //     transactions.add(new Transaction("(supplier)", m.name, qty, 0, "RESTOCK"));
-    //     System.out.println("Restocked " + qty + " x " + m.name);
-    // }
 
      public void restock(OTCMedication m, int qty) {
         m.increaseStockBy(qty);

@@ -61,7 +61,5 @@ public abstract class Medication {
     public String getName() {
         return this.name;
     }
-
-    public abstract void dispense(Customer c, int qty, String prescriber);
     
 }
