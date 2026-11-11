@@ -4,7 +4,11 @@
 //
 // Run it as-is first to see what it currently does before you change anything.
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+
+import customer.Customer;
+import customer.CustomerType;
 
 public class PharmacyTracker {
 
@@ -16,9 +20,9 @@ public class PharmacyTracker {
         p.addMedication(paracetamol);
         p.addMedication(amoxicillin);
 
-        Customer kofi = new Customer("Kofi Mensah", "WALK_IN");
-        Customer ama = new Customer("Ama Owusu", "REGISTERED");
-        ama.phone = "0244 000 000"; // registered patients have contact details on file
+        Customer kofi = new Customer("Kofi Mensah", customer.CustomerType.WALK_IN);
+        Customer ama = new Customer("Ama Owusu", customer.CustomerType.REGISTERED);
+        // ama.phone = "0244 000 000"; // registered patients have contact details on file
         p.addCustomer(kofi);
         p.addCustomer(ama);
 
@@ -52,21 +56,6 @@ class Medication {
     }
 }
 
-class Customer {
-    public String name;
-    public String kind; // "WALK_IN" or "REGISTERED"
-    public String phone;
-    public int id;
-    public List<String> history = new ArrayList<>();
-    static int counter = 1;
-
-    public Customer(String name, String kind) {
-        this.id = counter;
-        counter++;
-        this.name = name;
-        this.kind = kind;
-    }
-}
 
 class Transaction {
     public int id;
@@ -111,11 +100,11 @@ class Pharmacy {
         double total = 0;
         if (m.category.equals("OTC")) {
             total = m.price * qty;
-            if (c.kind.equals("REGISTERED")) {
+            if (c.getKind() == CustomerType.REGISTERED) {
                 total = total * 0.95; // registered patients get 5% off
             }
             m.stock = m.stock - qty;
-            System.out.println("Dispensed " + qty + " x " + m.name + " to " + c.name
+            System.out.println("Dispensed " + qty + " x " + m.name + " to " + c.getName()
                     + " for GHS " + total);
         } else if (m.category.equals("PRESCRIPTION")) {
             if (prescriber == null) {
@@ -123,16 +112,18 @@ class Pharmacy {
                 return;
             }
             total = m.price * qty;
-            if (c.kind.equals("REGISTERED")) {
+            if (c.getKind() == CustomerType.REGISTERED) {
                 total = total * 0.95; // registered patients get 5% off
             }
             m.stock = m.stock - qty;
-            System.out.println("Dispensed " + qty + " x " + m.name + " to " + c.name
+            System.out.println("Dispensed " + qty + " x " + m.name + " to " + c.getName()
                     + " (prescribed by " + prescriber + ") for GHS " + total);
         }
-        c.history.add("Got " + qty + " x " + m.name);
-        transactions.add(new Transaction(c.name, m.name, qty, total, "DISPENSE"));
+        c.recordHistory("Got " + qty + " x " + m.name); //TODO: catch an error here and reverse the transaction
+        transactions.add(new Transaction(c.getName(), m.name, qty, total, "DISPENSE"));
     }
+
+    
 
     public void restock(Medication m, int qty) {
         m.stock = m.stock + qty;
