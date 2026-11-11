@@ -75,6 +75,8 @@ class Customer {
   -phone: String
   -kind: CustomerType
   -history: List~Transaction~ 
+  +getName()
+  +recordHistory()
 }
 
 
