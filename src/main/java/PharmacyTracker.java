@@ -11,6 +11,8 @@ import java.time.LocalDate;
 import customer.Customer;
 import medication.OTCMedication;
 import medication.PrescriptionMedication;
+import transaction.TransactionType;
+import transaction.Transaction;
 
 public class PharmacyTracker {
 
@@ -40,48 +42,30 @@ public class PharmacyTracker {
     }
 }
 
-// class Medication {
-//     public String name;
-//     public double price;
-//     public int stock;
-//     public String category; // "OTC" or "PRESCRIPTION"
+
+
+// class Transaction {
 //     public int id;
+//     public String customerName;
+//     public String medName;
+//     public int qty;
+//     public double total;
+//     public String type; // "DISPENSE" or "RESTOCK"
 //     static int counter = 1;
 
-//     public Medication(String name, double price, int stock, String category) {
+//     public Transaction(String customerName, String medName, int qty, double total, String type) {
 //         this.id = counter;
 //         counter++;
-//         this.name = name;
-//         this.price = price;
-//         this.stock = stock;
-//         this.category = category;
+//         this.customerName = customerName;
+//         this.medName = medName;
+//         this.qty = qty;
+//         this.total = total;
+//         this.type = type;
 //     }
 // }
 
-
-class Transaction {
-    public int id;
-    public String customerName;
-    public String medName;
-    public int qty;
-    public double total;
-    public String type; // "DISPENSE" or "RESTOCK"
-    static int counter = 1;
-
-    public Transaction(String customerName, String medName, int qty, double total, String type) {
-        this.id = counter;
-        counter++;
-        this.customerName = customerName;
-        this.medName = medName;
-        this.qty = qty;
-        this.total = total;
-        this.type = type;
-    }
-}
-
 class Pharmacy {
     public String name;
-    // public List<Medication> meds = new ArrayList<>();
     public List<OTCMedication> otcMeds = new ArrayList<>();
     public List<PrescriptionMedication> prescriptionMeds = new ArrayList<>();
     public List<Customer> customers = new ArrayList<>();
@@ -91,10 +75,6 @@ class Pharmacy {
     public Pharmacy(String name) {
         this.name = name;
     }
-
-    // public void addMedication(Medication m) {
-    //     meds.add(m);
-    // }
 
     public void addMedication(OTCMedication m) {
         otcMeds.add(m);
@@ -157,7 +137,7 @@ class Pharmacy {
             System.out.println("Dispensed " + qty + " x " + m.getName() + " to " + c.getName()
                     + " for GHS " + total);
             c.recordHistory("Got " + qty + " x " + m.getName()); //TODO: catch an error here and reverse the transaction
-            transactions.add(new Transaction(c.getName(), m.getName(), qty, total, "DISPENSE"));
+            transactions.add(new Transaction(c.getName(), m.getName(), qty, m.getId(), total, TransactionType.DISPENSE));
 
         } catch (IllegalArgumentException e) {
             System.out.println(e.getCause());
@@ -174,7 +154,7 @@ class Pharmacy {
             System.out.println("Dispensed " + qty + " x " + m.getName() + " to " + c.getName()
                     + " (prescribed by " + prescriber + ") for GHS " + total);
             c.recordHistory("Got " + qty + " x " + m.getName()); //TODO: catch an error here and reverse the transaction
-            transactions.add(new Transaction(c.getName(), m.getName(), qty, total, "DISPENSE"));
+            transactions.add(new Transaction(c.getName(), m.getName(), qty, m.getId(), total, TransactionType.DISPENSE));
         } catch(Exception e) {
 
         }
@@ -183,18 +163,18 @@ class Pharmacy {
 
      public void restock(OTCMedication m, int qty) {
         m.increaseStockBy(qty);
-        transactions.add(new Transaction("(supplier)", m.getName(), qty, 0, "RESTOCK"));
+        transactions.add(new Transaction("(supplier)", m.getName(), qty, m.getId(), 0, TransactionType.RESTOCK));
         System.out.println("Restocked " + qty + " x " + m.getName());
     }
 
      public void restock(PrescriptionMedication m, int qty) {
         m.increaseStockBy(qty);
-        transactions.add(new Transaction("(supplier)", m.getName(), qty, 0, "RESTOCK"));
+        transactions.add(new Transaction("(supplier)", m.getName(), qty, m.getId(), 0, TransactionType.RESTOCK));
         System.out.println("Restocked " + qty + " x " + m.getName());
     }
 
     public List<Transaction> getTransactions() {
-        return transactions; // hand the list back so callers can read it
+        return List.copyOf(transactions); // hand the list back so callers can read it
     }
 
     public void printReport() {
