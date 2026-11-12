@@ -5,7 +5,7 @@ import java.util.List;
 
 public class Customer {
     private String name;
-    private CustomerType kind; // "WALK_IN" or "REGISTERED"
+    private CustomerType kind;
     private String phone;
     private int id;
     private List<String> history = new ArrayList<>();
@@ -21,6 +21,7 @@ public class Customer {
     }
 
     public Customer(String name, CustomerType kind, String phone) {
+        if (kind != CustomerType.REGISTERED) throw new IllegalStateException("Cannot register phone for WALK_INs");
         if (name == null || name.isBlank()) throw new IllegalArgumentException("Name cannot be empty");
         if (kind == null ) throw new IllegalArgumentException("Kind cannot be empty");
         if (phone == null || phone.isBlank()) throw new IllegalArgumentException("Phone cannot be empty");

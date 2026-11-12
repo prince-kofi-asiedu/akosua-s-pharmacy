@@ -18,19 +18,13 @@ mvn compile
 mvn exec:java -Dexec.mainClass=PharmacyTracker
 ```
 
-**Or directly with the JDK:**
-
-```bash
-javac -d target/classes src/main/java/PharmacyTracker.java
-java -cp target/classes PharmacyTracker
-```
 
 ## Most dangerous defect from the diagnosis
 
 **Dispensing more than is in stock.** The original program "dispensed" 100 Amoxicillin when only 40 existed, charged GHS 3000 and left stock at -61. For a pharmacy this is the worst defect: a patient can leave with an incomplete antibiotic course while the record says it was full, and prescription-only stock that doesn't reconcile can cost the pharmacy its licence at inspection.
 
 
-# Rebuild
+## Rebuild
 The class diagram of the proposed rebuild of the PharmacyTracker program.
 
 ## Class Diagram
@@ -39,15 +33,19 @@ classDiagram
 
 class Pharmacy {
   -name: String
-  <!-- -Inventory inventory -->
   -customers: List~Customer~ 
-  -medications: List~Medication~
+  -octMeds: List~OCTMedication~
+  -precriptionMeds: List~PrescriptionMedication~
   -transaction: List~Transaction~
   +dispense()
   +restock()
   +addCustomer()
   +getTransactions()
   +printReport()
+  -today()
+  -ensureNotExpired()
+  -computePrice()
+  -printExpiryWarnings()
 }
 
 
@@ -55,7 +53,7 @@ class Medication {
   <<abstract>>
   -id: int
   -name: String
-  -price: double
+  -price: BigDecimal
   -stock: int
   -expiryDate: localDate
   -stockingThreshold: int
@@ -79,7 +77,7 @@ class Customer {
   -name: String
   -phone: String
   -kind: CustomerType
-  -history: List~Transaction~ 
+  -history: List~String~ 
   +getName()
   +recordHistory()
   +getKind()
@@ -89,8 +87,8 @@ class Customer {
 
 class Transaction {
   -id: int
-  -timestamp: LocalDate
-  -total: double
+  -timestamp: LocalDateTime
+  -total: BigDecimal
   -customerId: int
   -medId: int
   -qty: int

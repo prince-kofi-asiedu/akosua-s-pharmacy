@@ -1,8 +1,10 @@
 package medication;
+
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
 public abstract class Medication {
+
     private String name;
     private BigDecimal price;
     private int stock;
@@ -10,7 +12,6 @@ public abstract class Medication {
     private LocalDate expiryDate;
     private int stockingThreshold;
     static int counter = 1;
-
 
     public Medication(String name, BigDecimal price, int stock, int stockingThreshold, LocalDate expiryDate) {
         if (name == null || name.isBlank()) {
@@ -24,7 +25,7 @@ public abstract class Medication {
         }
         if (price.stripTrailingZeros().scale() > 2) {
             throw new IllegalArgumentException("Price cannot have more than 2 decimal places, got " + price);
-        }  
+        }
         if (stock < 0) {
             throw new IllegalArgumentException("Stock cannot be negative, got " + stock);
         }
@@ -33,7 +34,7 @@ public abstract class Medication {
         }
 
         if (expiryDate.isBefore(LocalDate.now())) {
-            throw new IllegalArgumentException("Cannot register expired goodds");
+            throw new IllegalArgumentException("Cannot register expired goods");
         }
 
         this.id = counter;
@@ -47,21 +48,30 @@ public abstract class Medication {
 
     public BigDecimal getPrice() {
         return this.price;
-    };
+    }
 
     public int getStock() {
         return this.stock;
     }
 
     public void reduceStockBy(int n) {
-        if (n < 0) throw new IllegalArgumentException("Stock cannot be negative, got " + n); // is a negative number
-        if (n > this.stock) throw new InsufficientStockException(this.name, this.id, n, this.stock);  // is more than we have
+        if (n < 0) {
+            throw new IllegalArgumentException("Stock cannot be negative, got " + n); // is a negative number
+
+        }
+        if (n > this.stock) {
+            throw new InsufficientStockException(this.name, this.id, n, this.stock);  // is more than we have
+
+        }
         this.stock -= n;
     }
 
     public void increaseStockBy(int n) {
-         if (n < 0) throw new IllegalArgumentException("Cannot increase stock by " + n); // is a negative number
-         this.stock += n;
+        if (n < 0) {
+            throw new IllegalArgumentException("Cannot increase stock by " + n); // is a negative number
+
+        }
+        this.stock += n;
     }
 
     public String getName() {
@@ -71,7 +81,7 @@ public abstract class Medication {
     public int getId() {
         return this.id;
     }
-    
+
     public LocalDate getExpiryDate() {
         return this.expiryDate;
     }
@@ -81,7 +91,9 @@ public abstract class Medication {
     }
 
     public boolean expiresWithin(int days, LocalDate date) {
-        if (days < 0) throw new IllegalArgumentException("days cannot be negative, got " + days);
+        if (days < 0) {
+            throw new IllegalArgumentException("days cannot be negative, got " + days);
+        }
         return !isExpiredOn(date) && !this.expiryDate.isAfter(date.plusDays(days));
     }
 
