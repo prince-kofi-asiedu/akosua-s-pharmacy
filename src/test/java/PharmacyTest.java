@@ -1,5 +1,6 @@
 import customer.Customer;
 import customer.CustomerType;
+import medication.ExpiredMedicationException;
 import medication.InsufficientStockException;
 import medication.OTCMedication;
 import medication.PrescriptionMedication;
@@ -13,7 +14,9 @@ import transaction.TransactionType;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -267,5 +270,78 @@ class PharmacyTest {
         assertTrue(output.contains("Paracetamol 500mg (OTC): 148 in stock"));
         assertTrue(output.contains("Transactions today: 3"));
         assertFalse(output.contains("in stock") && output.matches("(?s).*: -\\d+ in stock.*"));
+    }
+
+    // ---- expiry -------------------------------------------------------------
+
+    /** A pharmacy whose "today" is {@code daysFromNow} days in the future. */
+    private static Pharmacy pharmacyOn(int daysFromNow) {
+        ZoneId zone = ZoneId.systemDefault();
+        Clock clock = Clock.fixed(LocalDate.now().plusDays(daysFromNow).atStartOfDay(zone).toInstant(), zone);
+        return new Pharmacy("Akosua's Pharmacy", clock);
+    }
+
+    @Test
+    void dispensingExpiredOtcMedicationIsRefusedAndChangesNothing() {
+        OTCMedication expiresToday = new OTCMedication("Cough syrup", new BigDecimal("8.00"), 10, 2, LocalDate.now());
+        Pharmacy tomorrow = pharmacyOn(1);
+        tomorrow.addMedication(expiresToday);
+
+        ExpiredMedicationException ex = assertThrows(ExpiredMedicationException.class,
+                () -> tomorrow.dispense(kofi, expiresToday, 1));
+
+        assertTrue(ex.getMessage().contains("Cough syrup"));
+        assertEquals(10, expiresToday.getStock());
+        assertTrue(tomorrow.getTransactions().isEmpty());
+    }
+
+    @Test
+    void dispensingExpiredPrescriptionMedicationIsRefusedAndChangesNothing() {
+        PrescriptionMedication expiresToday = new PrescriptionMedication("Insulin", new BigDecimal("40.00"), 5, 1, LocalDate.now());
+        Pharmacy tomorrow = pharmacyOn(1);
+        tomorrow.addMedication(expiresToday);
+
+        assertThrows(ExpiredMedicationException.class,
+                () -> tomorrow.dispense(ama, expiresToday, 1, "Dr. Boateng"));
+
+        assertEquals(5, expiresToday.getStock());
+        assertTrue(tomorrow.getTransactions().isEmpty());
+    }
+
+    @Test
+    void medicationCanStillBeDispensedOnItsExpiryDay() {
+        OTCMedication expiresToday = new OTCMedication("Cough syrup", new BigDecimal("8.00"), 10, 2, LocalDate.now());
+        Pharmacy today = pharmacyOn(0);
+        today.addMedication(expiresToday);
+
+        today.dispense(kofi, expiresToday, 1);
+
+        assertEquals(9, expiresToday.getStock());
+    }
+
+    @Test
+    void reportFlagsExpiredAndSoonToExpireStock() {
+        OTCMedication expiresToday = new OTCMedication("Cough syrup", new BigDecimal("8.00"), 10, 2, LocalDate.now());
+        PrescriptionMedication expiresSoon = new PrescriptionMedication("Insulin", new BigDecimal("40.00"), 5, 1,
+                LocalDate.now().plusDays(20));
+        Pharmacy tomorrow = pharmacyOn(1);
+        tomorrow.addMedication(expiresToday);
+        tomorrow.addMedication(expiresSoon);
+        tomorrow.addMedication(paracetamol); // expires next year: must not be listed
+
+        tomorrow.printReport();
+
+        String report = out.toString();
+        assertTrue(report.contains("Expiry check:"));
+        assertTrue(report.contains("EXPIRED - remove from shelf: Cough syrup"));
+        assertTrue(report.contains("Expiring within 30 days: Insulin"));
+        assertFalse(report.contains("Expiring within 30 days: Paracetamol"));
+        assertFalse(report.contains("EXPIRED - remove from shelf: Paracetamol"));
+    }
+
+    @Test
+    void reportHasNoExpirySectionWhenAllStockIsFresh() {
+        pharmacy.printReport();
+        assertFalse(out.toString().contains("Expiry check:"));
     }
 }

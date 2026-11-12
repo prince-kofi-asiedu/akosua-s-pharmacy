@@ -11,6 +11,7 @@ import java.time.LocalDateTime;
 import java.math.BigDecimal;
 
 import customer.Customer;
+import medication.ExpiredMedicationException;
 import medication.InsufficientStockException;
 import medication.OTCMedication;
 import medication.PrescriptionMedication;
@@ -51,7 +52,7 @@ public class PharmacyTracker {
     private static void tryRun(Runnable action) {
         try {
             action.run();
-        } catch (InsufficientStockException | IllegalArgumentException e) {
+        } catch (InsufficientStockException | ExpiredMedicationException | IllegalArgumentException e){
             System.out.println("Could not complete: " + e.getMessage());
         }
     }

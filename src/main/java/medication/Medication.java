@@ -72,4 +72,17 @@ public abstract class Medication {
         return this.id;
     }
     
+    public LocalDate getExpiryDate() {
+        return this.expiryDate;
+    }
+
+    public boolean isExpiredOn(LocalDate date) {
+        return date.isAfter(this.expiryDate);
+    }
+
+    public boolean expiresWithin(int days, LocalDate date) {
+        if (days < 0) throw new IllegalArgumentException("days cannot be negative, got " + days);
+        return !isExpiredOn(date) && !this.expiryDate.isAfter(date.plusDays(days));
+    }
+
 }
