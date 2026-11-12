@@ -20,6 +20,16 @@ public class Customer {
         this.kind = kind;
     }
 
+    public Customer(String name, CustomerType kind, String phone) {
+        if (name == null || name.isBlank()) throw new IllegalArgumentException("Name cannot be empty");
+        if (kind == null ) throw new IllegalArgumentException("Kind cannot be empty");
+        if (phone == null || phone.isBlank()) throw new IllegalArgumentException("Phone cannot be empty");
+        this.id = counter;
+        counter++;
+        this.name = name;
+        this.kind = kind;
+    }
+
     public CustomerType getKind() {
         return kind;
     }

@@ -344,4 +344,100 @@ class PharmacyTest {
         pharmacy.printReport();
         assertFalse(out.toString().contains("Expiry check:"));
     }
+
+    @Test
+    void expiredErrorNamesTheMedicationAndItsExpiryDate() {
+        LocalDate expiry = LocalDate.now();
+        OTCMedication syrup = new OTCMedication("Cough syrup", new BigDecimal("8.00"), 10, 2, expiry);
+        Pharmacy tomorrow = pharmacyOn(1);
+        tomorrow.addMedication(syrup);
+
+        ExpiredMedicationException ex = assertThrows(ExpiredMedicationException.class,
+                () -> tomorrow.dispense(kofi, syrup, 1));
+
+        assertTrue(ex.getMessage().contains("Cough syrup"));
+        assertTrue(ex.getMessage().contains(expiry.toString()));
+    }
+
+    @Test
+    void expiryIsCheckedBeforeStockLevel() {
+        // Both rules are broken; the patient-safety one (expiry) must be the one reported.
+        OTCMedication syrup = new OTCMedication("Cough syrup", new BigDecimal("8.00"), 10, 2, LocalDate.now());
+        Pharmacy tomorrow = pharmacyOn(1);
+        tomorrow.addMedication(syrup);
+
+        assertThrows(ExpiredMedicationException.class, () -> tomorrow.dispense(kofi, syrup, 999));
+        assertEquals(10, syrup.getStock());
+    }
+
+    @Test
+    void missingPrescriptionIsStillReportedForExpiredPrescriptionMedication() {
+        PrescriptionMedication insulin = new PrescriptionMedication("Insulin", new BigDecimal("40.00"), 5, 1, LocalDate.now());
+        Pharmacy tomorrow = pharmacyOn(1);
+        tomorrow.addMedication(insulin);
+
+        assertThrows(IllegalArgumentException.class, () -> tomorrow.dispense(ama, insulin, 1, null));
+        assertEquals(5, insulin.getStock());
+    }
+
+    @Test
+    void refusedExpiredDispenseDoesNotBlockLaterValidDispenses() {
+        OTCMedication expired = new OTCMedication("Cough syrup", new BigDecimal("8.00"), 10, 2, LocalDate.now());
+        OTCMedication fresh = new OTCMedication("Vitamin C", new BigDecimal("5.00"), 10, 2, NEXT_YEAR);
+        Pharmacy tomorrow = pharmacyOn(1);
+        tomorrow.addMedication(expired);
+        tomorrow.addMedication(fresh);
+
+        assertThrows(ExpiredMedicationException.class, () -> tomorrow.dispense(kofi, expired, 1));
+        tomorrow.dispense(kofi, fresh, 2);
+
+        assertEquals(8, fresh.getStock());
+        assertEquals(1, tomorrow.getTransactions().size());
+    }
+
+    @Test
+    void reportWarningWindowIncludesDay30ButNotDay31() {
+        LocalDate today = LocalDate.now();
+        OTCMedication day30 = new OTCMedication("Day30 Tablets", new BigDecimal("1.00"), 1, 0,
+                today.plusDays(Pharmacy.EXPIRY_WARNING_DAYS));
+        OTCMedication day31 = new OTCMedication("Day31 Tablets", new BigDecimal("1.00"), 1, 0,
+                today.plusDays(Pharmacy.EXPIRY_WARNING_DAYS + 1));
+        Pharmacy now = pharmacyOn(0);
+        now.addMedication(day30);
+        now.addMedication(day31);
+
+        now.printReport();
+
+        String report = out.toString();
+        assertTrue(report.contains("Expiring within 30 days: Day30 Tablets"));
+        assertFalse(report.contains("Day31 Tablets (expires"));
+    }
+
+    @Test
+    void reportStillShowsStockLevelOfExpiredMedication() {
+        OTCMedication syrup = new OTCMedication("Cough syrup", new BigDecimal("8.00"), 10, 2, LocalDate.now());
+        Pharmacy tomorrow = pharmacyOn(1);
+        tomorrow.addMedication(syrup);
+
+        tomorrow.printReport();
+
+        String report = out.toString();
+        assertTrue(report.contains("Cough syrup (OTC): 10 in stock"));
+        assertTrue(report.contains("EXPIRED - remove from shelf: Cough syrup (expired " + LocalDate.now() + ", 10 in stock)"));
+    }
+
+    @Test
+    void reportListsEveryExpiredItemNotJustTheFirst() {
+        OTCMedication a = new OTCMedication("Syrup A", new BigDecimal("1.00"), 1, 0, LocalDate.now());
+        PrescriptionMedication b = new PrescriptionMedication("Drops B", new BigDecimal("1.00"), 1, 0, LocalDate.now());
+        Pharmacy tomorrow = pharmacyOn(1);
+        tomorrow.addMedication(a);
+        tomorrow.addMedication(b);
+
+        tomorrow.printReport();
+
+        String report = out.toString();
+        assertTrue(report.contains("EXPIRED - remove from shelf: Syrup A"));
+        assertTrue(report.contains("EXPIRED - remove from shelf: Drops B"));
+    }
 }

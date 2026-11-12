@@ -9,6 +9,8 @@ import java.util.List;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.math.BigDecimal;
+import java.time.Clock;
+import java.util.stream.Stream;
 
 import customer.Customer;
 import medication.ExpiredMedicationException;
@@ -17,6 +19,7 @@ import medication.OTCMedication;
 import medication.PrescriptionMedication;
 import transaction.TransactionType;
 import transaction.Transaction;
+import medication.Medication;
 
 public class PharmacyTracker {
 
@@ -25,6 +28,8 @@ public class PharmacyTracker {
 
         OTCMedication paracetamol = new OTCMedication("Paracetamol 500mg", BigDecimal.valueOf(12.50), 100, 4, LocalDate.parse("2027-11-12"));
         PrescriptionMedication amoxicillin = new PrescriptionMedication("Amoxicillin 250mg", BigDecimal.valueOf(30), 40, 5, LocalDate.parse("2028-12-12"));
+        OTCMedication coughSyrup = new OTCMedication("Cough Syrup 100ml",
+                new BigDecimal("8.00"), 20, 5, LocalDate.now().plusDays(30));
         p.addMedication(paracetamol);
         p.addMedication(amoxicillin);
 
@@ -66,9 +71,20 @@ class Pharmacy {
     public List<Customer> customers = new ArrayList<>();
     private List<Transaction> transactions = new ArrayList<>();
     private static final double discount = 0.95;
+    static final int EXPIRY_WARNING_DAYS = 30;
+    private final Clock clock;
 
-    public Pharmacy(String name) {
+     public Pharmacy(String name) {
+        this(name, Clock.systemDefaultZone());
+    }
+
+    Pharmacy(String name, Clock clock) {
         this.name = name;
+        this.clock = clock;
+    }
+
+    private LocalDate today() {
+        return LocalDate.now(clock);
     }
 
     public void addMedication(OTCMedication m) {
@@ -78,10 +94,13 @@ class Pharmacy {
     public void addMedication(PrescriptionMedication m) {
         prescriptionMeds.add(m);
     }
-    
 
     public void addCustomer(Customer c) {
         customers.add(c);
+    }
+
+    private void ensureNotExpired(Medication m) {
+        if (m.isExpiredOn(today())) throw new ExpiredMedicationException(m.getName(), m.getId(), m.getExpiryDate());
     }
 
     private BigDecimal computePrice(BigDecimal medicationPrice, int qty, double discount) {
@@ -95,6 +114,7 @@ class Pharmacy {
     }
 
     public void dispense(Customer c, OTCMedication m, int qty) {
+        ensureNotExpired(m);
         boolean cannotSatisfyDispense = qty > m.getStock();
         if (cannotSatisfyDispense) throw new InsufficientStockException(m.getName(), m.getId(), qty, m.getStock());
 
@@ -102,12 +122,13 @@ class Pharmacy {
         m.reduceStockBy(qty);
         System.out.println("Dispensed " + qty + " x " + m.getName() + " to " + c.getName()
                 + " for GHS " + total);
-        c.recordHistory("Got " + qty + " x " + m.getName()); //TODO: catch an error here and reverse the transaction
+        c.recordHistory("Got " + qty + " x " + m.getName());
         transactions.add(new Transaction(c.getName(), c.getId(), m.getName(), qty, m.getId(), total, TransactionType.DISPENSE, LocalDateTime.now()));
     }
 
     public void dispense(Customer c, PrescriptionMedication m, int qty, String prescriber) {
-        if (prescriber == null || prescriber.isBlank()) throw new IllegalArgumentException("Prescription required for " + m.getName());        
+        if (prescriber == null || prescriber.isBlank()) throw new IllegalArgumentException("Prescription required for " + m.getName());    
+        ensureNotExpired(m);    
         boolean cannotSatisfyDispense = qty > m.getStock();
         if (cannotSatisfyDispense) throw new InsufficientStockException(m.getName(), m.getId(), qty, m.getStock());
 
@@ -147,5 +168,23 @@ class Pharmacy {
             System.out.println("  " + m.getName() + " (PRESCRIPTION): " + m.getStock() + " in stock");
         }
         System.out.println("Transactions today: " + transactions.size());
+        printExpiryWarnings();
+    }
+
+    private void printExpiryWarnings() {
+        LocalDate today = today();
+        List<Medication> meds = Stream.concat(otcMeds.stream(), prescriptionMeds.stream())
+                .map(m -> (Medication) m).toList();
+        List<Medication> expired = meds.stream().filter(m -> m.isExpiredOn(today)).toList();
+        List<Medication> expiringSoon = meds.stream().filter(m -> m.expiresWithin(EXPIRY_WARNING_DAYS, today)).toList();
+        if (expired.isEmpty() && expiringSoon.isEmpty()) return;
+
+        System.out.println("Expiry check:");
+        for (Medication m : expired) {
+            System.out.println("  EXPIRED - remove from shelf: " + m.getName() + " (expired " + m.getExpiryDate() + ", " + m.getStock() + " in stock)");
+        }
+        for (Medication m : expiringSoon) {
+            System.out.println("  Expiring within " + EXPIRY_WARNING_DAYS + " days: " + m.getName() + " (expires " + m.getExpiryDate() + ", " + m.getStock() + " in stock)");
+        }
     }
 }

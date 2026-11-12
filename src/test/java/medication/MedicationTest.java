@@ -214,4 +214,25 @@ class MedicationTest {
     void getExpiryDateReturnsTheDateGiven() {
         assertEquals(NEXT_YEAR, otc(1).getExpiryDate());
     }
+
+    @Test
+    void expiresWithinZeroDaysMeansExpiresToday() {
+        LocalDate today = LocalDate.now();
+        OTCMedication expiresToday = new OTCMedication("X", BigDecimal.ONE, 1, 0, today);
+        OTCMedication expiresTomorrow = new OTCMedication("Y", BigDecimal.ONE, 1, 0, today.plusDays(1));
+
+        assertTrue(expiresToday.expiresWithin(0, today));
+        assertFalse(expiresTomorrow.expiresWithin(0, today));
+    }
+
+    @Test
+    void subtypesShareTheSameExpiryRules() {
+        LocalDate expiry = LocalDate.now().plusDays(5);
+        Medication otc = new OTCMedication("X", BigDecimal.ONE, 1, 0, expiry);
+        Medication rx = new PrescriptionMedication("Y", BigDecimal.ONE, 1, 0, expiry);
+        LocalDate after = expiry.plusDays(1);
+
+        assertEquals(otc.isExpiredOn(after), rx.isExpiredOn(after));
+        assertEquals(otc.expiresWithin(10, LocalDate.now()), rx.expiresWithin(10, LocalDate.now()));
+    }
 }
