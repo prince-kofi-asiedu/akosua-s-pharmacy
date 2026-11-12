@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.math.BigDecimal;
 
 import customer.Customer;
 import medication.InsufficientStockException;
@@ -21,8 +22,8 @@ public class PharmacyTracker {
     public static void main(String[] args) {
         Pharmacy p = new Pharmacy("Akosua's Pharmacy");
 
-        OTCMedication paracetamol = new OTCMedication("Paracetamol 500mg", 12.50, 100, 4, LocalDate.parse("2027-11-12"));
-        PrescriptionMedication amoxicillin = new PrescriptionMedication("Amoxicillin 250mg", 30.00, 40, 5, LocalDate.parse("2028-12-12"));
+        OTCMedication paracetamol = new OTCMedication("Paracetamol 500mg", BigDecimal.valueOf(12.50), 100, 4, LocalDate.parse("2027-11-12"));
+        PrescriptionMedication amoxicillin = new PrescriptionMedication("Amoxicillin 250mg", BigDecimal.valueOf(30), 40, 5, LocalDate.parse("2028-12-12"));
         p.addMedication(paracetamol);
         p.addMedication(amoxicillin);
 
@@ -82,12 +83,12 @@ class Pharmacy {
         customers.add(c);
     }
 
-    private double computePrice(double medicationPrice, int qty, double discount) {
-        double total = 0;
-        total = medicationPrice * qty;
-        boolean noDiscount = !(discount <= 0) || (discount >= 1);
-        if (noDiscount) {
-            total = total * discount; // registered patients get 5% off
+    private BigDecimal computePrice(BigDecimal medicationPrice, int qty, double discount) {
+        BigDecimal total = BigDecimal.ZERO;
+        total = medicationPrice.multiply(BigDecimal.valueOf(qty));
+        boolean isDiscounted = !(discount <= 0) || (discount >= 1);
+        if (isDiscounted) {
+            total =  total.multiply(BigDecimal.valueOf(discount)); // registered patients get 5% off
         }
         return total;
     }
@@ -96,7 +97,7 @@ class Pharmacy {
         boolean cannotSatisfyDispense = qty > m.getStock();
         if (cannotSatisfyDispense) throw new InsufficientStockException(m.getName(), m.getId(), qty, m.getStock());
 
-        double total = computePrice(m.getPrice(), qty, 0);
+        BigDecimal total = computePrice(m.getPrice(), qty, 0);
         m.reduceStockBy(qty);
         System.out.println("Dispensed " + qty + " x " + m.getName() + " to " + c.getName()
                 + " for GHS " + total);
@@ -109,24 +110,24 @@ class Pharmacy {
         boolean cannotSatisfyDispense = qty > m.getStock();
         if (cannotSatisfyDispense) throw new InsufficientStockException(m.getName(), m.getId(), qty, m.getStock());
 
-        double total = computePrice(m.getPrice(), qty, discount);
+        BigDecimal total = computePrice(m.getPrice(), qty, discount);
         m.reduceStockBy(qty);
         System.out.println("Dispensed " + qty + " x " + m.getName() + " to " + c.getName()
                 + " (prescribed by " + prescriber + ") for GHS " + total);
-        c.recordHistory("Got " + qty + " x " + m.getName()); //TODO: catch an error here and reverse the transaction
+        c.recordHistory("Got " + qty + " x " + m.getName());
         transactions.add(new Transaction(c.getName(), c.getId(), m.getName(), qty, m.getId(), total, TransactionType.DISPENSE, LocalDateTime.now()));
 
     }
 
      public void restock(OTCMedication m, int qty) {
              m.increaseStockBy(qty);
-            transactions.add(new Transaction("(supplier)", m.getName(), qty, m.getId(), 0, TransactionType.RESTOCK, LocalDateTime.now()));
+            transactions.add(new Transaction("(supplier)", m.getName(), qty, m.getId(), BigDecimal.ZERO, TransactionType.RESTOCK, LocalDateTime.now()));
             System.out.println("Restocked " + qty + " x " + m.getName());
     }
 
     public void restock(PrescriptionMedication m, int qty) {
         m.increaseStockBy(qty);
-        transactions.add(new Transaction("(supplier)", m.getName(), qty, m.getId(), 0, TransactionType.RESTOCK, LocalDateTime.now()));
+        transactions.add(new Transaction("(supplier)", m.getName(), qty, m.getId(), BigDecimal.ZERO, TransactionType.RESTOCK, LocalDateTime.now()));
         System.out.println("Restocked " + qty + " x " + m.getName());
     }
 

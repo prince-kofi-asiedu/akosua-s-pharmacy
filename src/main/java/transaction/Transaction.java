@@ -1,4 +1,5 @@
 package transaction;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 public record Transaction(int id,
@@ -7,7 +8,7 @@ public record Transaction(int id,
     String medName,
     int medId,
     int qty,
-    double total,
+    BigDecimal total,
     TransactionType type,
     LocalDateTime timestamp) {
     // "DISPENSE" or "RESTOCK"
@@ -30,16 +31,24 @@ public record Transaction(int id,
         if (qty <= 0) {
             throw new IllegalArgumentException("Quantity must be positive, got " + qty);
         }
-        if (!Double.isFinite(total) || total < 0) {
-            throw new IllegalArgumentException("Total must be a non-negative number, got " + total);
+        
+         if (total == null) {
+            throw new IllegalArgumentException("total is required");
         }
+        if (total.signum() < 0) {
+            throw new IllegalArgumentException("total must be positive, got " + total);
+        }
+        if (total.stripTrailingZeros().scale() > 2) {
+            throw new IllegalArgumentException("Price cannot have more than 2 decimal places, got " + total);
+        }  
+        
     }
 
-    public Transaction(String customerName, int customerId, String medName, int qty, int medId, double total, TransactionType type, LocalDateTime timestamp) {
+    public Transaction(String customerName, int customerId, String medName, int qty, int medId, BigDecimal total, TransactionType type, LocalDateTime timestamp) {
         this(counter++, customerName, 0, medName, medId, qty, total, type, timestamp);
     }
 
-    public Transaction(String customerName, String medName, int qty, int medId, double total, TransactionType type, LocalDateTime timestamp) {
+    public Transaction(String customerName, String medName, int qty, int medId, BigDecimal total, TransactionType type, LocalDateTime timestamp) {
         this(counter++, customerName, 0, medName, medId, qty, total, type, timestamp);
     }
 }

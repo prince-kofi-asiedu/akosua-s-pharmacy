@@ -1,9 +1,10 @@
 package medication;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 public abstract class Medication {
     private String name;
-    private double price;
+    private BigDecimal price;
     private int stock;
     private int id;
     private LocalDate expiryDate;
@@ -11,13 +12,19 @@ public abstract class Medication {
     static int counter = 1;
 
 
-    public Medication(String name, double price, int stock, int stockingThreshold, LocalDate expiryDate) {
+    public Medication(String name, BigDecimal price, int stock, int stockingThreshold, LocalDate expiryDate) {
         if (name == null || name.isBlank()) {
             throw new IllegalArgumentException("Medication name must not be blank");
         }
-        if (price <= 0) {
+        if (price == null) {
+            throw new IllegalArgumentException("Price is required");
+        }
+        if (price.signum() <= 0) {
             throw new IllegalArgumentException("Price must be positive, got " + price);
         }
+        if (price.stripTrailingZeros().scale() > 2) {
+            throw new IllegalArgumentException("Price cannot have more than 2 decimal places, got " + price);
+        }  
         if (stock < 0) {
             throw new IllegalArgumentException("Stock cannot be negative, got " + stock);
         }
@@ -32,13 +39,13 @@ public abstract class Medication {
         this.id = counter;
         counter++;
         this.name = name;
-        this.price = price;
+        this.price = price.setScale(2);
         this.stock = stock;
         this.stockingThreshold = stockingThreshold;
         this.expiryDate = expiryDate;
     }
 
-    public double getPrice() {
+    public BigDecimal getPrice() {
         return this.price;
     };
 
