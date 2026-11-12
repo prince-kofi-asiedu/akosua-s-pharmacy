@@ -40,7 +40,7 @@ public abstract class Medication {
         this.id = counter;
         counter++;
         this.name = name;
-        this.price = price.setScale(2);
+        this.price = price.setScale(1);
         this.stock = stock;
         this.stockingThreshold = stockingThreshold;
         this.expiryDate = expiryDate;

@@ -117,7 +117,7 @@ class Pharmacy {
         if (c.getKind() == CustomerType.REGISTERED) {
             total = total.multiply(BigDecimal.valueOf(REGISTERED_DISCOUNT)); // registered patients get 5% off
         }
-        return total.setScale(2, RoundingMode.HALF_UP);
+        return total.setScale(1, RoundingMode.HALF_UP);
     }
 
     public void dispense(Customer c, Medication m, int qty) {

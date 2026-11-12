@@ -186,14 +186,16 @@ Transactions today: 4
 ### After
 
 ```text
-Dispensed 2 x Paracetamol 500mg to Kofi Mensah for GHS 25.00
-Dispensed 1 x Amoxicillin 250mg to Ama Owusu (prescribed by Dr. Boateng) for GHS 28.50
+Dispensed 2 x Paracetamol 500mg to Kofi Mensah for GHS 25.0
+Dispensed 1 x Amoxicillin 250mg to Ama Owusu (prescribed by Dr. Boateng) for GHS 28.5
 Restocked 50 x Paracetamol 500mg
-Could not complete: Insufficient stock for Amoxicillin 250mg: requested 100, available 39
+2026-11-12 13:52:55 WARNING PharmacyTracker - InsufficientStockException at Pharmacy.dispense(PharmacyTracker.java:132): Insufficient stock for Amoxicillin 250mg (id 2)  : requested 100, available 39
 
 === Akosua's Pharmacy - end of day ===
 Stock levels:
   Paracetamol 500mg (OTC): 148 in stock
   Amoxicillin 250mg (PRESCRIPTION): 39 in stock
 Transactions today: 3
+Expiry check:
+  Expiring within 30 days: Paracetamol 500mg (expires 2026-12-12, 148 in stock)
 ```
