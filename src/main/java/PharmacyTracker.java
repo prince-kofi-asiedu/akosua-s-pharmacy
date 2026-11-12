@@ -109,25 +109,25 @@ class Pharmacy {
         return total.setScale(2, RoundingMode.HALF_UP);
     }
 
-    public void dispense(Customer c, OTCMedication m, int qty) {
-        ensureNotExpired(m);
-        boolean cannotSatisfyDispense = qty > m.getStock();
-        if (cannotSatisfyDispense) {
-            throw new InsufficientStockException(m.getName(), m.getId(), qty, m.getStock());
-        }
-
-        BigDecimal total = computePrice(m.getPrice(), qty, c);
-        m.reduceStockBy(qty);
-        System.out.println("Dispensed " + qty + " x " + m.getName() + " to " + c.getName()
-                + " for GHS " + total);
-        c.recordHistory("Got " + qty + " x " + m.getName());
-        transactions.add(new Transaction(c.getName(), c.getId(), m.getName(), qty, m.getId(), total, TransactionType.DISPENSE, LocalDateTime.now(clock)));
+    // public void dispense(Customer c, OTCMedication m, int qty) {
+    //     ensureNotExpired(m);
+    //     boolean cannotSatisfyDispense = qty > m.getStock();
+    //     if (cannotSatisfyDispense) {
+    //         throw new InsufficientStockException(m.getName(), m.getId(), qty, m.getStock());
+    //     }
+    //     BigDecimal total = computePrice(m.getPrice(), qty, c);
+    //     m.reduceStockBy(qty);
+    //     System.out.println("Dispensed " + qty + " x " + m.getName() + " to " + c.getName()
+    //             + " for GHS " + total);
+    //     c.recordHistory("Got " + qty + " x " + m.getName());
+    //     transactions.add(new Transaction(c.getName(), c.getId(), m.getName(), qty, m.getId(), total, TransactionType.DISPENSE, LocalDateTime.now(clock)));
+    // }
+    public void dispense(Customer c, Medication m, int qty) {
+        dispense(c, m, qty, null);
     }
 
-    public void dispense(Customer c, PrescriptionMedication m, int qty, String prescriber) {
-        if (prescriber == null || prescriber.isBlank()) {
-            throw new IllegalArgumentException("Prescription required for " + m.getName());
-        }
+    public void dispense(Customer c, Medication m, int qty, String prescriber) {
+        m.checkCanDispense(prescriber);
         ensureNotExpired(m);
         boolean cannotSatisfyDispense = qty > m.getStock();
         if (cannotSatisfyDispense) {
@@ -136,10 +136,16 @@ class Pharmacy {
 
         BigDecimal total = computePrice(m.getPrice(), qty, c);
         m.reduceStockBy(qty);
-        System.out.println("Dispensed " + qty + " x " + m.getName() + " to " + c.getName()
-                + " (prescribed by " + prescriber + ") for GHS " + total);
-        c.recordHistory("Got " + qty + " x " + m.getName());
+
+        if (prescriber == null) {
+            System.out.println("Dispensed " + qty + " x " + m.getName() + " to " + c.getName()
+                    + " for GHS " + total);
+        } else {
+            System.out.println("Dispensed " + qty + " x " + m.getName() + " to " + c.getName()
+                    + " (prescribed by " + prescriber + ") for GHS " + total);
+        }
         transactions.add(new Transaction(c.getName(), c.getId(), m.getName(), qty, m.getId(), total, TransactionType.DISPENSE, LocalDateTime.now(clock)));
+        c.recordHistory("Got " + qty + " x " + m.getName());
 
     }
 
@@ -149,7 +155,7 @@ class Pharmacy {
         System.out.println("Restocked " + qty + " x " + m.getName());
     }
 
-    public void restock(PrescriptionMedication m, int qty) {
+    public void restock(Medication m, int qty) {
         m.increaseStockBy(qty);
         transactions.add(new Transaction("(supplier)", m.getName(), qty, m.getId(), BigDecimal.ZERO, TransactionType.RESTOCK, LocalDateTime.now(clock)));
         System.out.println("Restocked " + qty + " x " + m.getName());

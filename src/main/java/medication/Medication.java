@@ -82,6 +82,10 @@ public abstract class Medication {
         return this.id;
     }
 
+    public void checkCanDispense(String prescriber) {}
+
+    public abstract String category();
+
     public LocalDate getExpiryDate() {
         return this.expiryDate;
     }
