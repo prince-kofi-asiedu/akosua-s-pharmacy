@@ -7,6 +7,8 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Clock;
 import java.util.stream.Stream;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import customer.Customer;
 import customer.CustomerType;
@@ -19,8 +21,17 @@ import transaction.Transaction;
 import medication.Medication;
 
 public class PharmacyTracker {
+    private static final Logger LOG = Logger.getLogger(PharmacyTracker.class.getName());
+
+    static {
+    if (System.getProperty("java.util.logging.SimpleFormatter.format") == null) {
+        System.setProperty("java.util.logging.SimpleFormatter.format",
+                "%1$tF %1$tT %4$s %3$s - %5$s%6$s%n");
+    }
+}
 
     public static void main(String[] args) {
+
         Pharmacy p = new Pharmacy("Akosua's Pharmacy");
 
         OTCMedication paracetamol = new OTCMedication("Paracetamol 500mg", BigDecimal.valueOf(12.50), 100, 4, LocalDate.now().plusDays(30));
@@ -53,7 +64,7 @@ public class PharmacyTracker {
         try {
             action.run();
         } catch (InsufficientStockException | ExpiredMedicationException | IllegalArgumentException e) {
-            System.out.println("Could not complete: " + e.getMessage());
+            LOG.warning(e.getClass().getSimpleName() + " at " + e.getStackTrace()[0] + ": " + e.getMessage());
         }
     }
 }
