@@ -86,7 +86,7 @@ class Pharmacy {
     private BigDecimal computePrice(BigDecimal medicationPrice, int qty, double discount) {
         BigDecimal total = BigDecimal.ZERO;
         total = medicationPrice.multiply(BigDecimal.valueOf(qty));
-        boolean isDiscounted = !(discount <= 0) || (discount >= 1);
+        boolean isDiscounted = !(discount <= 0) && !(discount >= 1);
         if (isDiscounted) {
             total =  total.multiply(BigDecimal.valueOf(discount)); // registered patients get 5% off
         }
