@@ -157,8 +157,6 @@ class PharmacyTest {
     }
 
     @Test
-    @Disabled("Known bug: discounted total 12.50 x 0.95 = 11.875 has 3 decimals; Transaction rejects it "
-            + "AFTER stock was already reduced, so stock is lost with no transaction recorded")
     void dispensePrescriptionWithFractionalDiscountedTotalSucceeds() {
         PrescriptionMedication rx = new PrescriptionMedication("Rx", new BigDecimal("12.50"), 10, 1, NEXT_YEAR);
         pharmacy.addMedication(rx);

@@ -20,7 +20,6 @@ class MedicationTest {
     }
 
     // ---- construction -------------------------------------------------------
-
     @Test
     void constructorStoresFields() {
         OTCMedication m = otc(100);
@@ -123,7 +122,6 @@ class MedicationTest {
     }
 
     // ---- stock changes ------------------------------------------------------
-
     @Test
     void reduceStockByDecreasesStock() {
         OTCMedication m = otc(10);
@@ -177,7 +175,6 @@ class MedicationTest {
     }
 
     // ---- expiry -------------------------------------------------------------
-
     @Test
     void isExpiredOnIsFalseUpToAndIncludingTheExpiryDay() {
         LocalDate expiry = LocalDate.now().plusDays(10);
