@@ -7,6 +7,7 @@
 import java.util.ArrayList;
 import java.util.List;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 import customer.Customer;
 import medication.OTCMedication;
@@ -27,6 +28,7 @@ public class PharmacyTracker {
         Customer kofi = new Customer("Kofi Mensah", customer.CustomerType.WALK_IN);
         Customer ama = new Customer("Ama Owusu", customer.CustomerType.REGISTERED);
         // ama.phone = "0244 000 000"; // registered patients have contact details on file
+        
         p.addCustomer(kofi);
         p.addCustomer(ama);
 
@@ -42,27 +44,6 @@ public class PharmacyTracker {
     }
 }
 
-
-
-// class Transaction {
-//     public int id;
-//     public String customerName;
-//     public String medName;
-//     public int qty;
-//     public double total;
-//     public String type; // "DISPENSE" or "RESTOCK"
-//     static int counter = 1;
-
-//     public Transaction(String customerName, String medName, int qty, double total, String type) {
-//         this.id = counter;
-//         counter++;
-//         this.customerName = customerName;
-//         this.medName = medName;
-//         this.qty = qty;
-//         this.total = total;
-//         this.type = type;
-//     }
-// }
 
 class Pharmacy {
     public String name;
@@ -137,7 +118,7 @@ class Pharmacy {
             System.out.println("Dispensed " + qty + " x " + m.getName() + " to " + c.getName()
                     + " for GHS " + total);
             c.recordHistory("Got " + qty + " x " + m.getName()); //TODO: catch an error here and reverse the transaction
-            transactions.add(new Transaction(c.getName(), m.getName(), qty, m.getId(), total, TransactionType.DISPENSE));
+            transactions.add(new Transaction(c.getName(), c.getId(), m.getName(), qty, m.getId(), total, TransactionType.DISPENSE, LocalDateTime.now()));
 
         } catch (IllegalArgumentException e) {
             System.out.println(e.getCause());
@@ -154,7 +135,7 @@ class Pharmacy {
             System.out.println("Dispensed " + qty + " x " + m.getName() + " to " + c.getName()
                     + " (prescribed by " + prescriber + ") for GHS " + total);
             c.recordHistory("Got " + qty + " x " + m.getName()); //TODO: catch an error here and reverse the transaction
-            transactions.add(new Transaction(c.getName(), m.getName(), qty, m.getId(), total, TransactionType.DISPENSE));
+            transactions.add(new Transaction(c.getName(), c.getId(), m.getName(), qty, m.getId(), total, TransactionType.DISPENSE, LocalDateTime.now()));
         } catch(Exception e) {
 
         }
@@ -163,13 +144,13 @@ class Pharmacy {
 
      public void restock(OTCMedication m, int qty) {
         m.increaseStockBy(qty);
-        transactions.add(new Transaction("(supplier)", m.getName(), qty, m.getId(), 0, TransactionType.RESTOCK));
+        transactions.add(new Transaction("(supplier)", m.getName(), qty, m.getId(), 0, TransactionType.RESTOCK, LocalDateTime.now()));
         System.out.println("Restocked " + qty + " x " + m.getName());
     }
 
      public void restock(PrescriptionMedication m, int qty) {
         m.increaseStockBy(qty);
-        transactions.add(new Transaction("(supplier)", m.getName(), qty, m.getId(), 0, TransactionType.RESTOCK));
+        transactions.add(new Transaction("(supplier)", m.getName(), qty, m.getId(), 0, TransactionType.RESTOCK, LocalDateTime.now()));
         System.out.println("Restocked " + qty + " x " + m.getName());
     }
 
@@ -187,7 +168,6 @@ class Pharmacy {
         for (PrescriptionMedication m : prescriptionMeds) {
             System.out.println("  " + m.getName() + " (PRESCRIPTION): " + m.getStock() + " in stock");
         }
-        
         System.out.println("Transactions today: " + transactions.size());
     }
 }

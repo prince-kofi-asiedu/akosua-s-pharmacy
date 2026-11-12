@@ -44,7 +44,6 @@ class Pharmacy {
   +restock()
   +addCustomer()
   +getTransactions()
-  -validateDispense()
   +printReport()
 }
 
@@ -57,7 +56,11 @@ class Medication {
   -stock: int
   -expiryDate: localDate
   -stockingThreshold: int
-  +dispense()
+  +getPrice()
+  +getStock()
+  +reduceStockBy()
+  +getName()
+  +getId()
   +auditExpiry()
 }
 
@@ -77,6 +80,8 @@ class Customer {
   -history: List~Transaction~ 
   +getName()
   +recordHistory()
+  +getKind()
+  +getId()
 }
 
 
@@ -87,7 +92,8 @@ class Transaction {
   -customerId: int
   -medId: int
   -qty: int
-  -type: TransactionType  
+  -type: TransactionType
+  +Transaction()
 }
 
 class CustomerType {

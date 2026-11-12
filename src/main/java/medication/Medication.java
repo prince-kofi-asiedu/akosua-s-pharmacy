@@ -1,8 +1,6 @@
 package medication;
 import java.time.LocalDate;
 
-import customer.Customer;
-
 public abstract class Medication {
     private String name;
     private double price;

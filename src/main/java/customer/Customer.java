@@ -3,23 +3,6 @@ package customer;
 import java.util.ArrayList;
 import java.util.List;
 
-// Original
-// class Customer {
-//     public String name;
-//     public String kind; // "WALK_IN" or "REGISTERED"
-//     public String phone;
-//     public int id;
-//     public List<String> history = new ArrayList<>();
-//     static int counter = 1;
-
-//     public Customer(String name, String kind) {
-//         this.id = counter;
-//         counter++;
-//         this.name = name;
-//         this.kind = kind;
-//     }
-// }
-
 public class Customer {
     private String name;
     private CustomerType kind; // "WALK_IN" or "REGISTERED"
@@ -41,6 +24,10 @@ public class Customer {
 
     public String getName() {
         return this.name;
+    }
+
+    public int getId() {
+        return this.id;
     }
     
     public void recordHistory(String event) {
