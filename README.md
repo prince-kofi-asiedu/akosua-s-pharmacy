@@ -34,8 +34,8 @@ classDiagram
 class Pharmacy {
   -name: String
   -customers: List~Customer~ 
-  -octMeds: List~OCTMedication~
-  -precriptionMeds: List~PrescriptionMedication~
+  -otcMeds: List~OTCMedication~
+  -prescriptionMeds: List~PrescriptionMedication~
   -transaction: List~Transaction~
   +dispense()
   +restock()
@@ -156,7 +156,7 @@ Transaction --> TransactionType : uses
 
 ## Code run output
 ### Before 
-```java
+```text
 Dispensed 2 x Paracetamol 500mg to Kofi Mensah for GHS 25.0
 Dispensed 1 x Amoxicillin 250mg to Ama Owusu (prescribed by Dr. Boateng) for GHS 28.5
 Restocked 50 x Paracetamol 500mg
@@ -171,9 +171,9 @@ Transactions today: 4
 
 
 ### After
-```java
+```text
 Dispensed 2 x Paracetamol 500mg to Kofi Mensah for GHS 25.00
-Dispensed 1 x Amoxicillin 250mg to Ama Owusu (prescribed by Dr. Boateng) for GHS 28.5000
+Dispensed 1 x Amoxicillin 250mg to Ama Owusu (prescribed by Dr. Boateng) for GHS 28.50
 Restocked 50 x Paracetamol 500mg
 Could not complete: Insufficient stock for Amoxicillin 250mg: requested 100, available 39
 
