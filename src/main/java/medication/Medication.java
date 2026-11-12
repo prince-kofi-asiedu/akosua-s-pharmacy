@@ -56,11 +56,11 @@ public abstract class Medication {
 
     public void reduceStockBy(int n) {
         if (n < 0) {
-            throw new IllegalArgumentException("Stock cannot be negative, got " + n); // is a negative number
+            throw new IllegalArgumentException("Stock cannot be negative, got " + n);
 
         }
         if (n > this.stock) {
-            throw new InsufficientStockException(this.name, this.id, n, this.stock);  // is more than we have
+            throw new InsufficientStockException(this.name, this.id, n, this.stock);
 
         }
         this.stock -= n;
@@ -81,6 +81,11 @@ public abstract class Medication {
     public int getId() {
         return this.id;
     }
+
+    public void checkCanDispense(String prescriber) {
+    }
+
+    public abstract String category();
 
     public LocalDate getExpiryDate() {
         return this.expiryDate;

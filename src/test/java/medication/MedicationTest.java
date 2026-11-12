@@ -171,7 +171,7 @@ class MedicationTest {
 
     @Test
     void insufficientStockExceptionIsUnchecked() {
-        assertInstanceOf(RuntimeException.class, new InsufficientStockException("X", 1, 2, 1));
+        assertInstanceOf(RuntimeException.class, new InsufficientStockException("X", 1,  2, 1));
     }
 
     // ---- expiry -------------------------------------------------------------
