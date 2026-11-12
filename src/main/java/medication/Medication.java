@@ -47,12 +47,13 @@ public abstract class Medication {
     }
 
     public void reduceStockBy(int n) {
-        if (n < 0) throw new IllegalArgumentException("Stock cannot be negative, got " + n);
+        if (n < 0) throw new IllegalArgumentException("Stock cannot be negative, got " + n); // is a negative number
+        if (n > this.stock) throw new InsufficientStockException(this.name, this.id, n, this.stock);  // is more than we have
         this.stock -= n;
     }
 
     public void increaseStockBy(int n) {
-         if (n < 0) throw new IllegalArgumentException("Cannot increase stock by " + n);
+         if (n < 0) throw new IllegalArgumentException("Cannot increase stock by " + n); // is a negative number
          this.stock += n;
     }
 

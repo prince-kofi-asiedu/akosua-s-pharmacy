@@ -10,6 +10,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 import customer.Customer;
+import medication.InsufficientStockException;
 import medication.OTCMedication;
 import medication.PrescriptionMedication;
 import transaction.TransactionType;
@@ -27,20 +28,31 @@ public class PharmacyTracker {
 
         Customer kofi = new Customer("Kofi Mensah", customer.CustomerType.WALK_IN);
         Customer ama = new Customer("Ama Owusu", customer.CustomerType.REGISTERED);
-        // ama.phone = "0244 000 000"; // registered patients have contact details on file
-        
+        ama.registerPhone("0244 000 000");
         p.addCustomer(kofi);
         p.addCustomer(ama);
 
-        // a normal morning
-        p.dispense(kofi, paracetamol, 2);
-        p.dispense(ama, amoxicillin, 1, "Dr. Boateng"); // prescription-only
-        p.restock(paracetamol, 50);
+        try {
+            // a normal morning
+            tryRun(() -> p.dispense(kofi, paracetamol, 2));
+            tryRun(() -> p.dispense(ama, amoxicillin, 1, "Dr. Boateng")); // prescription-only
+            tryRun(() -> p.restock(paracetamol, 50));
 
-        // ... and the sort of thing that keeps Akosua up at night:
-        p.dispense(kofi, amoxicillin, 100, "Dr. Boateng"); // far more than we have in stock
+            // ... and the sort of thing that keeps Akosua up at night:
+            tryRun(() -> p.dispense(kofi, amoxicillin, 100, "Dr. Boateng")); // far more than we have in stock
 
+        } catch(Exception e) {
+            System.out.println("Unexpected Error" + e.getMessage());
+        }
         p.printReport();
+    }
+
+    private static void tryRun(Runnable action) {
+        try {
+            action.run();
+        } catch (InsufficientStockException | IllegalArgumentException e) {
+            System.out.println("Could not complete: " + e.getMessage());
+        }
     }
 }
 
@@ -70,34 +82,6 @@ class Pharmacy {
         customers.add(c);
     }
 
-    // Dispense medicine to a customer. The rules depend on the kind of medicine.
-    // public void dispense(Customer c, Medication m, int qty, String prescriber) {
-    //     double total = 0;
-    //     if (m.category.equals("OTC")) {
-    //         total = m.price * qty;
-    //         if (c.getKind() == CustomerType.REGISTERED) {
-    //             total = total * discount; // registered patients get 5% off
-    //         }
-    //         m.stock = m.stock - qty;
-    //         System.out.println("Dispensed " + qty + " x " + m.name + " to " + c.getName()
-    //                 + " for GHS " + total);
-    //     } else if (m.category.equals("PRESCRIPTION")) {
-    //         if (prescriber == null) {
-    //             System.out.println("Cannot dispense " + m.name + " without a prescriber");
-    //             return;
-    //         }
-    //         total = m.price * qty;
-    //         if (c.getKind() == CustomerType.REGISTERED) {
-    //             total = total * discount; // registered patients get 5% off
-    //         }
-    //         m.stock = m.stock - qty;
-    //         System.out.println("Dispensed " + qty + " x " + m.name + " to " + c.getName()
-    //                 + " (prescribed by " + prescriber + ") for GHS " + total);
-    //     }
-    //     c.recordHistory("Got " + qty + " x " + m.name); //TODO: catch an error here and reverse the transaction
-    //     transactions.add(new Transaction(c.getName(), m.name, qty, total, "DISPENSE"));
-    // }
-
     private double computePrice(double medicationPrice, int qty, double discount) {
         double total = 0;
         total = medicationPrice * qty;
@@ -109,46 +93,38 @@ class Pharmacy {
     }
 
     public void dispense(Customer c, OTCMedication m, int qty) {
-        try {
-            boolean cannotSatisfyDispense = qty > m.getStock();
-            if (cannotSatisfyDispense) throw new IllegalStateException("Insufficient stock for " + m.getName() + ": requested " + qty + ", available " + m.getStock());
-        
-            double total = computePrice(m.getPrice(), qty, 0);
-            m.reduceStockBy(qty);
-            System.out.println("Dispensed " + qty + " x " + m.getName() + " to " + c.getName()
-                    + " for GHS " + total);
-            c.recordHistory("Got " + qty + " x " + m.getName()); //TODO: catch an error here and reverse the transaction
-            transactions.add(new Transaction(c.getName(), c.getId(), m.getName(), qty, m.getId(), total, TransactionType.DISPENSE, LocalDateTime.now()));
+        boolean cannotSatisfyDispense = qty > m.getStock();
+        if (cannotSatisfyDispense) throw new InsufficientStockException(m.getName(), m.getId(), qty, m.getStock());
 
-        } catch (IllegalArgumentException e) {
-            System.out.println(e.getCause());
-        }        
+        double total = computePrice(m.getPrice(), qty, 0);
+        m.reduceStockBy(qty);
+        System.out.println("Dispensed " + qty + " x " + m.getName() + " to " + c.getName()
+                + " for GHS " + total);
+        c.recordHistory("Got " + qty + " x " + m.getName()); //TODO: catch an error here and reverse the transaction
+        transactions.add(new Transaction(c.getName(), c.getId(), m.getName(), qty, m.getId(), total, TransactionType.DISPENSE, LocalDateTime.now()));
     }
 
     public void dispense(Customer c, PrescriptionMedication m, int qty, String prescriber) {
-        try {
-             boolean cannotSatisfyDispense = qty > m.getStock();
-            if (cannotSatisfyDispense) throw new IllegalStateException("Insufficient stock for " + m.getName() + ": requested " + qty + ", available " + m.getStock());
+        if (prescriber == null || prescriber.isBlank()) throw new IllegalArgumentException("Prescription required for " + m.getName());        
+        boolean cannotSatisfyDispense = qty > m.getStock();
+        if (cannotSatisfyDispense) throw new InsufficientStockException(m.getName(), m.getId(), qty, m.getStock());
 
-            double total = computePrice(m.getPrice(), qty, discount);
-            m.reduceStockBy(qty);
-            System.out.println("Dispensed " + qty + " x " + m.getName() + " to " + c.getName()
-                    + " (prescribed by " + prescriber + ") for GHS " + total);
-            c.recordHistory("Got " + qty + " x " + m.getName()); //TODO: catch an error here and reverse the transaction
-            transactions.add(new Transaction(c.getName(), c.getId(), m.getName(), qty, m.getId(), total, TransactionType.DISPENSE, LocalDateTime.now()));
-        } catch(Exception e) {
-
-        }
+        double total = computePrice(m.getPrice(), qty, discount);
+        m.reduceStockBy(qty);
+        System.out.println("Dispensed " + qty + " x " + m.getName() + " to " + c.getName()
+                + " (prescribed by " + prescriber + ") for GHS " + total);
+        c.recordHistory("Got " + qty + " x " + m.getName()); //TODO: catch an error here and reverse the transaction
+        transactions.add(new Transaction(c.getName(), c.getId(), m.getName(), qty, m.getId(), total, TransactionType.DISPENSE, LocalDateTime.now()));
 
     }
 
      public void restock(OTCMedication m, int qty) {
-        m.increaseStockBy(qty);
-        transactions.add(new Transaction("(supplier)", m.getName(), qty, m.getId(), 0, TransactionType.RESTOCK, LocalDateTime.now()));
-        System.out.println("Restocked " + qty + " x " + m.getName());
+             m.increaseStockBy(qty);
+            transactions.add(new Transaction("(supplier)", m.getName(), qty, m.getId(), 0, TransactionType.RESTOCK, LocalDateTime.now()));
+            System.out.println("Restocked " + qty + " x " + m.getName());
     }
 
-     public void restock(PrescriptionMedication m, int qty) {
+    public void restock(PrescriptionMedication m, int qty) {
         m.increaseStockBy(qty);
         transactions.add(new Transaction("(supplier)", m.getName(), qty, m.getId(), 0, TransactionType.RESTOCK, LocalDateTime.now()));
         System.out.println("Restocked " + qty + " x " + m.getName());

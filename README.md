@@ -65,11 +65,10 @@ class Medication {
 }
 
 class PrescriptionMedication {
-  +dispense()
+
 }
 
 class OTCMedication {
-  +dispense()
 }
 
 class Customer {
