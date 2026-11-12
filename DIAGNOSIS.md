@@ -1,10 +1,10 @@
-## Diagnosis.md
+# Diagnosis.md
 A detailed account of defects I found in the program ranked by severity level and business risk.
 
 No.| Issue   | Where | Root cause | Business Risk | Severity |
 |--|--------|----------|-----|--------|--------|
 |1. | No validation of class properties on creation | Medication class | No check for price and other medication properties in the medication object creation process. | Inventory corruption and loss of revenue. | 1 |
-|2. | No verification of restock quantity | restock() method of Pharmacy class | No check for quantity validity in the dispense function. Quantity can be negative or 0. | Incorrect transactions in the business and incorrect revenue calculations. | 1 |
+|2. | No verification of restock quantity | restock() method of Pharmacy class | No check for quantity validity in the restock function. Quantity can be negative or 0. | Incorrect transactions in the business and incorrect revenue calculations. | 1 |
 |3. | Dispensing of out-of-stock drugs | in the dispense() method; Pharmacy class | No check for quantity of medication left before dispensing. | Customers pay for drugs that are not available. This leads to reduced trust in the pharmacy and its systems. | 1 |
 |4.| Class fields are accessible by all code | Customer, Transaction, Medication and Pharmacy classes | Class fields are defined as public  | Modifications can be made to the data without verification. This leads to falsification of data and unauthorized access to Personal Identifiable data which is against the law | 1 |
 |5.| Medication, Customers and Transactions are not standardized into their categories. Fake categories can be input without checks | Medication, Customer and Transaction classes | No predefined list of categories for CUSTOMER , TRANSACTIONS and MEDICATION classes. |  Incorrect data logging of dispenser events at the pharmacy. This leads to the occurrence of unacceptable events at the pharmacy. | 1 |

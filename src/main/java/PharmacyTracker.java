@@ -6,9 +6,8 @@ import java.time.LocalDateTime;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Clock;
-import java.util.stream.Stream;
-import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.lang.IllegalStateException;
 
 import customer.Customer;
 import customer.CustomerType;
@@ -21,14 +20,15 @@ import transaction.Transaction;
 import medication.Medication;
 
 public class PharmacyTracker {
+
     private static final Logger LOG = Logger.getLogger(PharmacyTracker.class.getName());
 
     static {
-    if (System.getProperty("java.util.logging.SimpleFormatter.format") == null) {
-        System.setProperty("java.util.logging.SimpleFormatter.format",
-                "%1$tF %1$tT %4$s %3$s - %5$s%6$s%n");
+        if (System.getProperty("java.util.logging.SimpleFormatter.format") == null) {
+            System.setProperty("java.util.logging.SimpleFormatter.format",
+                    "%1$tF %1$tT %4$s %3$s - %5$s%6$s%n");
+        }
     }
-}
 
     public static void main(String[] args) {
 
@@ -55,7 +55,7 @@ public class PharmacyTracker {
             tryRun(() -> p.dispense(kofi, amoxicillin, 100, "Dr. Boateng")); // far more than we have in stock
 
         } catch (Exception e) {
-            System.out.println("Unexpected Error" + e.getMessage());
+            LOG.warning(e.getClass().getSimpleName() + " at " + e.getStackTrace()[0] + ": " + e.getMessage());
         }
         p.printReport();
     }
@@ -63,7 +63,7 @@ public class PharmacyTracker {
     private static void tryRun(Runnable action) {
         try {
             action.run();
-        } catch (InsufficientStockException | ExpiredMedicationException | IllegalArgumentException e) {
+        } catch (InsufficientStockException | ExpiredMedicationException | IllegalArgumentException | IllegalStateException e) {
             LOG.warning(e.getClass().getSimpleName() + " at " + e.getStackTrace()[0] + ": " + e.getMessage());
         }
     }
@@ -72,8 +72,7 @@ public class PharmacyTracker {
 class Pharmacy {
 
     private String name;
-    private List<OTCMedication> otcMeds = new ArrayList<>();
-    private List<PrescriptionMedication> prescriptionMeds = new ArrayList<>();
+    private List<Medication> medications = new ArrayList<>();
     private List<Customer> customers = new ArrayList<>();
     private List<Transaction> transactions = new ArrayList<>();
     private static final double REGISTERED_DISCOUNT = 0.95;
@@ -93,12 +92,8 @@ class Pharmacy {
         return LocalDate.now(clock);
     }
 
-    public void addMedication(OTCMedication m) {
-        otcMeds.add(m);
-    }
-
-    public void addMedication(PrescriptionMedication m) {
-        prescriptionMeds.add(m);
+    public void addMedication(Medication m) {
+        medications.add(m);
     }
 
     public void addCustomer(Customer c) {
@@ -117,7 +112,7 @@ class Pharmacy {
         if (c.getKind() == CustomerType.REGISTERED) {
             total = total.multiply(BigDecimal.valueOf(REGISTERED_DISCOUNT)); // registered patients get 5% off
         }
-        return total.setScale(1, RoundingMode.HALF_UP);
+        return total.setScale(2, RoundingMode.HALF_UP);
     }
 
     public void dispense(Customer c, Medication m, int qty) {
@@ -161,11 +156,8 @@ class Pharmacy {
         System.out.println();
         System.out.println("=== " + name + " - end of day ===");
         System.out.println("Stock levels:");
-        for (OTCMedication m : otcMeds) {
-            System.out.println("  " + m.getName() + " (OTC): " + m.getStock() + " in stock");
-        }
-        for (PrescriptionMedication m : prescriptionMeds) {
-            System.out.println("  " + m.getName() + " (PRESCRIPTION): " + m.getStock() + " in stock");
+        for (Medication m : medications) {
+            System.out.println("  " + m.getName() + " " + m.category() + " " + m.getStock() + " in stock");
         }
         System.out.println("Transactions today: " + transactions.size());
         printExpiryWarnings();
@@ -173,10 +165,8 @@ class Pharmacy {
 
     private void printExpiryWarnings() {
         LocalDate today = today();
-        List<Medication> meds = Stream.concat(otcMeds.stream(), prescriptionMeds.stream())
-                .map(m -> (Medication) m).toList();
-        List<Medication> expired = meds.stream().filter(m -> m.isExpiredOn(today)).toList();
-        List<Medication> expiringSoon = meds.stream().filter(m -> m.expiresWithin(EXPIRY_WARNING_DAYS, today)).toList();
+        List<Medication> expired = medications.stream().filter(m -> m.isExpiredOn(today)).toList();
+        List<Medication> expiringSoon = medications.stream().filter(m -> m.expiresWithin(EXPIRY_WARNING_DAYS, today)).toList();
         if (expired.isEmpty() && expiringSoon.isEmpty()) {
             return;
         }
