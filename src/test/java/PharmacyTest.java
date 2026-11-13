@@ -1,26 +1,36 @@
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
+import java.math.BigDecimal;
+import java.time.Clock;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.logging.Handler;
+import java.util.logging.Level;
+import java.util.logging.LogRecord;
+import java.util.logging.Logger;
+
+import org.junit.jupiter.api.AfterEach;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+
 import customer.Customer;
 import customer.CustomerType;
 import medication.ExpiredMedicationException;
 import medication.InsufficientStockException;
 import medication.OTCMedication;
 import medication.PrescriptionMedication;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
-import org.junit.jupiter.api.Test;
+import pharmacy.Pharmacy;
 import transaction.Transaction;
 import transaction.TransactionType;
-
-import java.io.ByteArrayOutputStream;
-import java.io.PrintStream;
-import java.math.BigDecimal;
-import java.time.Clock;
-import java.time.LocalDate;
-import java.time.ZoneId;
-import java.time.LocalDateTime;
-import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 class PharmacyTest {
 
@@ -131,7 +141,6 @@ class PharmacyTest {
     }
 
     @Test
-    @Disabled("Known bug: the 5% discount is applied to every prescription, including walk-in customers")
     void dispensePrescriptionToWalkInCustomerChargesFullPrice() {
         pharmacy.dispense(kofi, amoxicillin, 1, "Dr. Boateng");
         assertEquals(0, new BigDecimal("30.00").compareTo(onlyTransaction().total()));
@@ -258,12 +267,38 @@ class PharmacyTest {
 
     // ---- end-to-end ---------------------------------------------------------
 
+    /** Runs the action and returns what PharmacyTracker logged, without printing it. */
+    private static List<LogRecord> captureLogs(Runnable action) {
+        Logger log = Logger.getLogger(PharmacyTracker.class.getName());
+        List<LogRecord> records = new ArrayList<>();
+        Handler handler = new Handler() {
+            @Override public void publish(LogRecord r) { records.add(r); }
+            @Override public void flush() { }
+            @Override public void close() { }
+        };
+        log.addHandler(handler);
+        log.setUseParentHandlers(false);
+        try {
+            action.run();
+        } finally {
+            log.removeHandler(handler);
+            log.setUseParentHandlers(true);
+        }
+        return records;
+    }
+
     @Test
     void mainProgramRunsAndNeverDrivesStockNegative() {
-        PharmacyTracker.main(new String[0]);
+        List<LogRecord> logs = captureLogs(() -> PharmacyTracker.main(new String[0]));
+
+        // The over-dispense is refused and logged once, as a warning, instead of being printed.
+        assertEquals(1, logs.size());
+        assertEquals(Level.WARNING, logs.get(0).getLevel());
+        assertTrue(logs.get(0).getMessage().contains("InsufficientStockException"));
+        assertTrue(logs.get(0).getMessage().contains("requested 100, available 39"));
 
         String output = out.toString();
-        assertTrue(output.contains("Could not complete: Insufficient stock"));
+        assertFalse(output.contains("Dispensed 100"));
         assertTrue(output.contains("Amoxicillin 250mg (PRESCRIPTION): 39 in stock"));
         assertTrue(output.contains("Paracetamol 500mg (OTC): 148 in stock"));
         assertTrue(output.contains("Transactions today: 3"));
@@ -397,9 +432,9 @@ class PharmacyTest {
     void reportWarningWindowIncludesDay30ButNotDay31() {
         LocalDate today = LocalDate.now();
         OTCMedication day30 = new OTCMedication("Day30 Tablets", new BigDecimal("1.00"), 1, 0,
-                today.plusDays(Pharmacy.EXPIRY_WARNING_DAYS));
+                today.plusDays(Pharmacy.getExpiryWarningWindow()));
         OTCMedication day31 = new OTCMedication("Day31 Tablets", new BigDecimal("1.00"), 1, 0,
-                today.plusDays(Pharmacy.EXPIRY_WARNING_DAYS + 1));
+                today.plusDays(Pharmacy.getExpiryWarningWindow() + 1));
         Pharmacy now = pharmacyOn(0);
         now.addMedication(day30);
         now.addMedication(day31);
@@ -437,5 +472,47 @@ class PharmacyTest {
         String report = out.toString();
         assertTrue(report.contains("EXPIRED - remove from shelf: Syrup A"));
         assertTrue(report.contains("EXPIRED - remove from shelf: Drops B"));
+    }
+
+    // ---- adding a new medication type needs no change to Pharmacy ----------
+
+    /**
+     * A new kind of medication, written only in this test. Pharmacy is not
+     * changed to support it: its rule comes from overriding checkCanDispense.
+     */
+    static class ControlledMedication extends PrescriptionMedication {
+        ControlledMedication(String name, BigDecimal price, int stock) {
+            super(name, price, stock, 1, LocalDate.now().plusYears(1));
+        }
+
+        @Override
+        public void checkCanDispense(String prescriber) {
+            super.checkCanDispense(prescriber);
+            if (!prescriber.startsWith("Dr.")) {
+                throw new IllegalArgumentException("Controlled drugs need a doctor's prescription");
+            }
+        }
+
+        @Override
+        public String category() {
+            return "CONTROLLED";
+        }
+    }
+
+    @Test
+    void newMedicationTypeWorksWithoutChangingPharmacy() {
+        ControlledMedication morphine = new ControlledMedication("Morphine 10mg", new BigDecimal("50.00"), 10);
+        pharmacy.addMedication(morphine);
+
+        assertThrows(IllegalArgumentException.class, () -> pharmacy.dispense(ama, morphine, 1, "Nurse Adjei"));
+        assertEquals(10, morphine.getStock());
+
+        pharmacy.dispense(ama, morphine, 1, "Dr. Boateng");
+        assertEquals(9, morphine.getStock());
+
+        pharmacy.restock(morphine, 5);
+        out.reset();
+        pharmacy.printReport();
+        assertTrue(out.toString().contains("Morphine 10mg (CONTROLLED): 14 in stock"));
     }
 }

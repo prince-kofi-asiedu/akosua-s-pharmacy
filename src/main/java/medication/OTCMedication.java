@@ -1,7 +1,7 @@
 package medication;
 
-import java.time.LocalDate;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 
 public class OTCMedication extends Medication {
 
@@ -11,6 +11,6 @@ public class OTCMedication extends Medication {
 
     @Override
     public String category() {
-        return "PRESCRIPTION";
+        return "OTC";
     }
 }

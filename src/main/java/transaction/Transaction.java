@@ -46,7 +46,7 @@ public record Transaction(int id,
     }
 
     public Transaction(String customerName, int customerId, String medName, int qty, int medId, BigDecimal total, TransactionType type, LocalDateTime timestamp) {
-        this(counter++, customerName, 0, medName, medId, qty, total, type, timestamp);
+        this(counter++, customerName, customerId, medName, medId, qty, total, type, timestamp);
     }
 
     public Transaction(String customerName, String medName, int qty, int medId, BigDecimal total, TransactionType type, LocalDateTime timestamp) {
