@@ -29,6 +29,7 @@ public class Customer {
         counter++;
         this.name = name;
         this.kind = kind;
+        this.registerPhone(phone);
     }
 
     public CustomerType getKind() {
